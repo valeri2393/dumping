@@ -36,19 +36,36 @@ class Updater():
     def _log(self, message):
         self._logger.info(message)
 
+    # def _update(self, result: list):
+    #     date_today = date.today().strftime("%d.%m.%Y")
+    #     for row in result:
+    #         id = int(row[0])
+    #         price = re.sub(r'[^\d\.\,)]', '', str(row[1])).rstrip(".")
+    #         cursor = self._conn.cursor()
+    #         query = "DELETE FROM prices " +\
+    #                 f"WHERE id = {id} AND date = '{date_today}'"
+    #         cursor.execute(query)
+    #         query = "INSERT INTO prices(id, date, price) VALUES (?, ?, ?)"
+    #         cursor.execute(query, (id, date_today, price))
+    #     self._conn.commit()
+    #     cursor.close()
+
     def _update(self, result: list):
-        date_today = date.today().strftime("%d.%m.%Y")
+        date_today = date.today().strftime("%d.%m.%Y")  # Текущая дата
+        cursor = self._conn.cursor()
         for row in result:
             id = int(row[0])
             price = re.sub(r'[^\d\.\,)]', '', str(row[1])).rstrip(".")
-            cursor = self._conn.cursor()
-            query = "DELETE FROM prices " +\
-                    f"WHERE id = {id} AND date = '{date_today}'"
+            # Удаление старой записи
+            query = f"DELETE FROM prices WHERE id = {id} AND date = '{date_today}'"
             cursor.execute(query)
+            # Вставка новой записи
             query = "INSERT INTO prices(id, date, price) VALUES (?, ?, ?)"
             cursor.execute(query, (id, date_today, price))
         self._conn.commit()
         cursor.close()
+
+
 
     def bs_parse(self, resource: str, path: str, attr='text'):
         urls, ids = get_cards_info(self._conn, resource)
