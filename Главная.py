@@ -204,7 +204,7 @@ pivot = pd.pivot_table(
     fill_value=0
 ).astype(int)
 st.dataframe(
-    pivot.style.applymap(color_pivot, subset=list(pivot.columns))
+    pivot.style.map(color_pivot, subset=list(pivot.columns))
 )
 st.write(
     SOURCE_FORMAT.format(f"Источник: {sources[type]}"), unsafe_allow_html=True
