@@ -137,10 +137,9 @@
 
 
 # Главная.py (обновленный)
-
-if "$$WIDGET_ID-716122cc22b59aa54828ec7bb437678b-None" not in st.session_state:
-    st.session_state["$$WIDGET_ID-716122cc22b59aa54828ec7bb437678b-None"] = None
-
+# Инициализация ключа
+if "selected_type" not in st.session_state:
+    st.session_state["selected_type"] = None
 
 import subprocess
 from threading import Thread
