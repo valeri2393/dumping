@@ -36,7 +36,9 @@ from updater.parsers import BS_RESOURCES, SELENIUM_RESOURCES, BUTTON_RESOURCES
 import time
 
 import sys
-print(sys.executable)
+print(f"Python executable: {sys.executable}")
+print(f"Python paths: {sys.path}")
+
 
 
 # Настройка логирования
