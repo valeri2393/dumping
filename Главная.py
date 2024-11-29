@@ -137,9 +137,6 @@
 
 
 # Главная.py (обновленный)
-# Инициализация ключа
-if "selected_type" not in st.session_state:
-    st.session_state["selected_type"] = None
 
 import subprocess
 from threading import Thread
