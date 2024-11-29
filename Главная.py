@@ -156,10 +156,10 @@ from webapp.styles import set_style, color_pivot
 from webapp.util import get_last_date, get_types
 import re
 
-if "$$WIDGET_ID-716122cc22b59aa54828ec7bb437678b-None" not in st.session_state:
-    st.session_state["$$WIDGET_ID-716122cc22b59aa54828ec7bb437678b-None"] = None
+if "selected_type" not in st.session_state:
+    st.session_state["selected_type"] = None
 
-    
+
 # Фоновый запуск updater.py
 def run_updater():
     subprocess.run(["python", "updater.py"])
@@ -175,10 +175,8 @@ sb_pic_path = cfg["SBPicPath"]
 last_date = get_last_date(conn)
 set_style(sb_pic_path, last_date)
 types = get_types(conn, last_date)
-if "type" not in st.session_state:
-    st.session_state["type"] = None
+type = st.sidebar.radio("Выберите тип ресурса:", types, key="selected_type", horizontal=True)
 
-type = st.sidebar.radio("Выберите тип ресурса:", types, key="type", horizontal=True)
 
 
 # Сводная таблица со средней скидкой
