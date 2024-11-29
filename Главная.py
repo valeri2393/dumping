@@ -149,7 +149,7 @@ from webapp.const import HEADER_FORMAT, SOURCE_FORMAT, sources
 from webapp.const import LINK_FORMAT
 from webapp.styles import set_style, color_pivot
 from webapp.util import get_last_date, get_types
-
+import re
 # Фоновый запуск updater.py
 def run_updater():
     subprocess.run(["python", "updater.py"])
@@ -249,7 +249,9 @@ for i in range(len(data)):
     url = data.iloc[i, 5]
     perc = data.iloc[i, 4]
     color = 'limegreen' if perc >= 0 else 'red'
-    data.iloc[i, 2] = str(LINK_FORMAT.format(url, price, color, perc))
+    numeric_value = int(re.sub(r'\D', '', price))  # Удаляет все нецифровые символы
+    data.iloc[i, 2] = numeric_value
+
 df_prices = pd.pivot_table(
     data=data,
     index=['Аналог', 'Цена аналога'],
