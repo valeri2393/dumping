@@ -178,7 +178,7 @@ else:
     set_style(sb_pic_path, last_date)
 
 # Получение типов ресурсов
-# types = get_types(conn, last_date)
+types = get_types(conn, last_date)
 if not types:
     st.error("Типы ресурсов не найдены. Проверьте базу данных.")
 else:
