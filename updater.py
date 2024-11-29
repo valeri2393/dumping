@@ -36,10 +36,13 @@ from updater.parsers import BS_RESOURCES, SELENIUM_RESOURCES, BUTTON_RESOURCES
 import time
 
 import sys
-print(f"Python executable: {sys.executable}")
-print(f"Python paths: {sys.path}")
-
-
+print("Python executable:", sys.executable)
+print("Python paths:", sys.path)
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    print("APScheduler импортирован успешно")
+except ModuleNotFoundError as e:
+    print(f"Ошибка импорта APScheduler: {e}")
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")

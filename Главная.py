@@ -137,6 +137,11 @@
 
 
 # Главная.py (обновленный)
+
+if "$$WIDGET_ID-716122cc22b59aa54828ec7bb437678b-None" not in st.session_state:
+    st.session_state["$$WIDGET_ID-716122cc22b59aa54828ec7bb437678b-None"] = None
+
+
 import subprocess
 from threading import Thread
 import pandas as pd
@@ -165,7 +170,11 @@ sb_pic_path = cfg["SBPicPath"]
 last_date = get_last_date(conn)
 set_style(sb_pic_path, last_date)
 types = get_types(conn, last_date)
-type = st.sidebar.radio("Выберите тип ресурса: ", types, horizontal=True)
+if "type" not in st.session_state:
+    st.session_state["type"] = None
+
+type = st.sidebar.radio("Выберите тип ресурса:", types, key="type", horizontal=True)
+
 
 # Сводная таблица со средней скидкой
 st.markdown(
