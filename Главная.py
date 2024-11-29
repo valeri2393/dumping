@@ -249,7 +249,9 @@ for i in range(len(data)):
     url = data.iloc[i, 5]
     perc = data.iloc[i, 4]
     color = 'limegreen' if perc >= 0 else 'red'
-    numeric_value = int(re.sub(r'\D', '', price))  # Удаляет все нецифровые символы
+    numeric_value = int(re.sub(r'\D', '', price.decode() if isinstance(price, bytes) else str(price)))
+
+  # Удаляет все нецифровые символы
     data.iloc[i, 2] = numeric_value
 
 df_prices = pd.pivot_table(
