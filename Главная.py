@@ -143,6 +143,7 @@ import streamlit as st
 import sqlite3
 import re
 
+from apscheduler.schedulers.background import BackgroundScheduler  # Убедитесь, что apscheduler установлен
 from util.config import build_config
 from util.db import request_sql
 from webapp.const import HEADER_FORMAT, SOURCE_FORMAT, sources
@@ -150,13 +151,17 @@ from webapp.const import LINK_FORMAT
 from webapp.styles import set_style, color_pivot
 from webapp.util import get_last_date, get_types
 
-# Инициализация st.session_state
+
+# Инициализация session_state
 if "selected_type" not in st.session_state:
     st.session_state["selected_type"] = None
 
 # Фоновый запуск updater.py
 def run_updater():
-    subprocess.run(["python", "updater.py"])
+    try:
+        subprocess.run(["python", "updater.py"])
+    except Exception as e:
+        st.error(f"Ошибка запуска updater.py: {e}")
 
 Thread(target=run_updater, daemon=True).start()
 
@@ -172,6 +177,7 @@ if not last_date:
 else:
     set_style(sb_pic_path, last_date)
 
+# Получение типов ресурсов
 types = get_types(conn, last_date)
 if not types:
     st.error("Типы ресурсов не найдены. Проверьте базу данных.")
@@ -189,21 +195,25 @@ else:
         <span style='color:limegreen'>выше</span> РРЦ СТН.""",
         unsafe_allow_html=True
     )
-    
-    pivot_query = f"""SELECT cards.resource, cards.category,
-                ROUND((SUM(prices.price)/SUM(analogues.price)-1)*100) AS perc
-                FROM prices
-                LEFT JOIN cards
-                    ON cards.id = prices.id
-                LEFT JOIN analogues
-                    ON cards.name_analogue = analogues.name_analogue
-                WHERE date = '{last_date}'
-                    AND cards.type = '{type}'
-                    AND cards.name_analogue <> 0
-                    AND prices.price <> 0
-                GROUP BY cards.category, cards.resource
-                ORDER BY cards.resource
-                """
+
+    # SQL-запрос для сводной таблицы
+    pivot_query = f"""
+    SELECT cards.resource, cards.category,
+           ROUND((SUM(prices.price)/SUM(analogues.price)-1)*100) AS perc
+    FROM prices
+    LEFT JOIN cards
+        ON cards.id = prices.id
+    LEFT JOIN analogues
+        ON cards.name_analogue = analogues.name_analogue
+    WHERE date = '{last_date}'
+      AND cards.type = '{type}'
+      AND cards.name_analogue <> 0
+      AND prices.price <> 0
+    GROUP BY cards.category, cards.resource
+    ORDER BY cards.resource
+    """
+
+    # Выполнение запроса и создание сводной таблицы
     pivot_data = request_sql(conn, pivot_query)
     if pivot_data:
         pivot = pd.pivot_table(
@@ -222,8 +232,66 @@ else:
             pivot.style.map(color_pivot, subset=list(pivot.columns))
         )
         st.write(
-            SOURCE_FORMAT.format(f"Источник: {sources.get(type, 'Неизвестно')}"), 
+            SOURCE_FORMAT.format(f"Источник: {sources.get(type, 'Неизвестно')}"),
             unsafe_allow_html=True
         )
     else:
         st.warning("Нет данных для сводной таблицы.")
+
+    # Таблица с ценами и ссылками
+    st.markdown(
+        HEADER_FORMAT.format('Цены и ссылки'),
+        unsafe_allow_html=True
+    )
+    if pivot_data:
+        category = st.sidebar.radio(
+            label="Выберите категорию:",
+            options=list(pivot.index),
+            horizontal=False
+        )
+
+        # SQL-запрос для таблицы цен
+        query = f"""
+        SELECT cards.resource, analogues.name_analogue,
+               CAST(prices.price AS INT),
+               CAST(analogues.price AS INT),
+               CAST((prices.price/analogues.price-1)*100 AS INT),
+               url
+        FROM prices
+        LEFT JOIN cards
+            ON cards.id = prices.id
+        LEFT JOIN analogues
+            ON cards.name_analogue = analogues.name_analogue
+        WHERE date = '{last_date}'
+          AND cards.type = '{type}'
+          AND cards.category = '{category}'
+          AND cards.name_analogue <> 0
+          AND prices.price <> 0
+        GROUP BY cards.resource, analogues.name_analogue
+        ORDER BY cards.resource, analogues.price
+        """
+        data = request_sql(conn, query)
+        if data:
+            df = pd.DataFrame(
+                data=data,
+                columns=['Ресурс', 'Аналог', 'Цена', 'Цена аналога', '%', 'url']
+            )
+
+            # Форматирование данных
+            for i in range(len(df)):
+                df.at[i, 'Цена'] = int(re.sub(r'\D', '', str(df.at[i, 'Цена'])))
+
+            # Пивот таблица для цен
+            df_prices = pd.pivot_table(
+                data=df,
+                index=['Аналог', 'Цена аналога'],
+                columns='Ресурс',
+                values='Цена',
+                aggfunc='first',
+                fill_value=0
+            ).reset_index()
+
+            # Отображение таблицы с форматированием
+            st.dataframe(df_prices)
+        else:
+            st.warning("Нет данных для таблицы цен.")
