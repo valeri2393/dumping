@@ -178,11 +178,21 @@ else:
     set_style(sb_pic_path, last_date)
 
 # Получение типов ресурсов
-types = get_types(conn, last_date)
+# types = get_types(conn, last_date)
 if not types:
     st.error("Типы ресурсов не найдены. Проверьте базу данных.")
 else:
-    type = st.sidebar.radio("Выберите тип ресурса:", types, key="selected_type", horizontal=True)
+    # Инициализация ключа selected_type в session_state
+    if "selected_type" not in st.session_state:
+        st.session_state["selected_type"] = None
+    
+    # Создание виджета radio с уникальным ключом
+    type = st.sidebar.radio(
+        "Выберите тип ресурса:", 
+        options=types, 
+        key="selected_type"
+    )
+    st.write(f"Выбранный тип ресурса: {type}")
 
     # Сводная таблица со средней скидкой
     st.markdown(
