@@ -249,7 +249,7 @@ for i in range(len(data)):
     url = data.iloc[i, 5]
     perc = data.iloc[i, 4]
     color = 'limegreen' if perc >= 0 else 'red'
-    data.iloc[i, 2] = LINK_FORMAT.format(url, price, color, perc)
+    data.iloc[i, 2] = str(LINK_FORMAT.format(url, price, color, perc))
 df_prices = pd.pivot_table(
     data=data,
     index=['Аналог', 'Цена аналога'],
