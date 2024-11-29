@@ -264,7 +264,7 @@ df_prices = df_prices.reindex(
     axis=1
 ).sort_index(level=[1]).reset_index()
 df_prices = df_prices.reset_index(drop=True).style.\
-    applymap(
+    map(
             func=color_pivot,
             subset=list(
                     filter(
