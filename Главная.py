@@ -171,6 +171,8 @@ if not last_date:
 else:
     set_style(sb_pic_path, last_date)
 
+# Получение типов ресурсов
+types = get_types(conn, last_date)
 # Проверяем наличие типов ресурсов
 if not types or len(types) == 0:
     st.error("Типы ресурсов не найдены. Проверьте базу данных.")
@@ -187,7 +189,6 @@ else:
         horizontal=True
     )
     st.write(f"Выбранный тип ресурса: {type}")
-
 
     # Сводная таблица со средней скидкой
     st.markdown(
