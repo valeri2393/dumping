@@ -35,6 +35,10 @@ from updater import Updater
 from updater.parsers import BS_RESOURCES, SELENIUM_RESOURCES, BUTTON_RESOURCES
 import time
 
+import sys
+print(sys.executable)
+
+
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 logger = logging.getLogger(__name__)
