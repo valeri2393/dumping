@@ -60,7 +60,7 @@ def update():
 scheduler = BackgroundScheduler()
 
 # Настройка задачи на ежедневное выполнение в 09:34
-scheduler.add_job(update, CronTrigger(hour=9, minute=34))
+scheduler.add_job(update, CronTrigger(hour=10, minute=16))
 
 # Запуск планировщика
 scheduler.start()
