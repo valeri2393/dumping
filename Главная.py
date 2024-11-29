@@ -149,7 +149,7 @@ from webapp.const import HEADER_FORMAT, SOURCE_FORMAT, sources
 from webapp.const import LINK_FORMAT
 from webapp.styles import set_style, color_pivot
 from webapp.util import get_last_date, get_types
-
+import re
 # Фоновый запуск updater.py
 def run_updater():
     subprocess.run(["python", "updater.py"])
@@ -204,7 +204,7 @@ pivot = pd.pivot_table(
     fill_value=0
 ).astype(int)
 st.dataframe(
-    pivot.style.applymap(color_pivot, subset=list(pivot.columns))
+    pivot.style.map(color_pivot, subset=list(pivot.columns))
 )
 st.write(
     SOURCE_FORMAT.format(f"Источник: {sources[type]}"), unsafe_allow_html=True
@@ -249,7 +249,11 @@ for i in range(len(data)):
     url = data.iloc[i, 5]
     perc = data.iloc[i, 4]
     color = 'limegreen' if perc >= 0 else 'red'
-    data.iloc[i, 2] = LINK_FORMAT.format(url, price, color, perc)
+    numeric_value = int(re.sub(r'\D', '', price.decode() if isinstance(price, bytes) else str(price)))
+
+  # Удаляет все нецифровые символы
+    data.iloc[i, 2] = numeric_value
+
 df_prices = pd.pivot_table(
     data=data,
     index=['Аналог', 'Цена аналога'],
@@ -264,7 +268,7 @@ df_prices = df_prices.reindex(
     axis=1
 ).sort_index(level=[1]).reset_index()
 df_prices = df_prices.reset_index(drop=True).style.\
-    applymap(
+    map(
             func=color_pivot,
             subset=list(
                     filter(
