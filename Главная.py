@@ -155,6 +155,11 @@ from webapp.const import LINK_FORMAT
 from webapp.styles import set_style, color_pivot
 from webapp.util import get_last_date, get_types
 import re
+
+if "$$WIDGET_ID-716122cc22b59aa54828ec7bb437678b-None" not in st.session_state:
+    st.session_state["$$WIDGET_ID-716122cc22b59aa54828ec7bb437678b-None"] = None
+
+    
 # Фоновый запуск updater.py
 def run_updater():
     subprocess.run(["python", "updater.py"])
