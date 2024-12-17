@@ -69,7 +69,7 @@ def update():
 scheduler = BackgroundScheduler()
 
 # Настройка задачи на ежедневное выполнение в 09:34
-scheduler.add_job(update, CronTrigger(hour=10, minute=16))
+scheduler.add_job(update, CronTrigger(hour=17, minute=48))
 
 # Запуск планировщика
 scheduler.start()
@@ -85,4 +85,7 @@ if __name__ == "__main__":
         scheduler.shutdown()
         logger.info("Скрипт остановлен")
 
+if __name__ == "__main__":
+    # Ручной запуск функции обновления
+    update()
 
