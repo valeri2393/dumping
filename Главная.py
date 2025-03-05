@@ -57,7 +57,7 @@
 #     fill_value=0
 # ).astype(int)
 # st.dataframe(
-#     pivot.style.applymap(color_pivot, subset=list(pivot.columns))
+#     pivot.style.map(color_pivot, subset=list(pivot.columns))
 # )
 # st.write(
 #     SOURCE_FORMAT.format(f"Источник: {sources[type]}"), unsafe_allow_html=True
@@ -135,13 +135,9 @@
 #         unsafe_allow_html=True
 #     )
 
-
-import subprocess
-from threading import Thread
 import pandas as pd
 import streamlit as st
 import sqlite3
-import re
 
 from util.config import build_config
 from util.db import request_sql
@@ -150,58 +146,155 @@ from webapp.const import LINK_FORMAT
 from webapp.styles import set_style, color_pivot
 from webapp.util import get_last_date, get_types
 
-# Фоновый запуск updater.py
-def run_updater():
-    try:
-        subprocess.run(["python", "updater.py"])
-    except Exception as e:
-        st.error(f"Ошибка запуска updater.py: {e}")
-
-Thread(target=run_updater, daemon=True).start()
-
-# Инициализация конфигурационного файла
+# Инициализация конфигурационного файла
 cfg = build_config('config.yaml')
 conn = sqlite3.connect(cfg["DBPath"])
 sb_pic_path = cfg["SBPicPath"]
 
-# Получение даты
+# Форматирование страницы по общему шаблону
 last_date = get_last_date(conn)
-if not last_date:
-    st.error("Дата не найдена. Проверьте базу данных.")
-else:
-    set_style(sb_pic_path, last_date)
-
-# Получение типов ресурсов
+set_style(sb_pic_path, last_date)
 types = get_types(conn, last_date)
-# Проверяем наличие типов ресурсов
-if not types or len(types) == 0:
-    st.error("Типы ресурсов не найдены. Проверьте базу данных.")
+
+if types:  # Проверка, чтобы список типов не был пустым
+    type = st.sidebar.radio("Выберите тип ресурса: ", types, horizontal=True)
 else:
-    # Инициализируем ключ в st.session_state, если он не существует
-    if "selected_type" not in st.session_state:
-        st.session_state["selected_type"] = types[0]  # Устанавливаем первое значение по умолчанию
+    type = None
 
-    # Создаем виджет radio с уникальным ключом
-    type = st.sidebar.radio(
-        "Выберите тип ресурса:", 
-        options=types, 
-        key="selected_type", 
-        horizontal=True
-    )
-    st.write(f"Выбранный тип ресурса: {type}")
+# Проверяем, существует ли type в sources
+source_text = sources.get(type, "Источник неизвестен")
 
-    # Сводная таблица со средней скидкой
-    st.markdown(
-        HEADER_FORMAT.format('Средний уровень цен по категориям и ресурсам'),
-        unsafe_allow_html=True
-    )
-    st.write(
-        """Числа в таблице показывают, на сколько % в среднем цены
-        <span style='color:red'>ниже</span> или
-        <span style='color:limegreen'>выше</span> РРЦ СТН.""",
-        unsafe_allow_html=True
-    )
+# # Сводная таблица со средней скидкой
+# st.markdown(
+#     HEADER_FORMAT.format('Средний уровень цен по категориям и ресурсам'),
+#     unsafe_allow_html=True
+# )
+# st.write(
+#     """Числа в таблице показывают, на сколько % в среднем цены
+#     <span style='color:red'>ниже</span> или
+#     <span style='color:limegreen'>выше</span> РРЦ СТН.""",
+#     unsafe_allow_html=True
+# )
 
+# # Запрос к базе данных
+# if type:
+#     pivot_query = f"""SELECT cards.resource, cards.category,
+#                 ROUND((SUM(prices.price)/SUM(analogues.price)-1)*100) AS perc
+#                 FROM prices
+#                 LEFT JOIN cards
+#                     ON cards.id = prices.id
+#                 LEFT JOIN analogues
+#                     ON cards.name_analogue = analogues.name_analogue
+#                 WHERE date = '{last_date}'
+#                     AND cards.type = '{type}'
+#                     AND cards.name_analogue <> 0
+#                     AND prices.price <> 0
+#                 GROUP BY cards.category, cards.resource
+#                 ORDER BY cards.resource
+#                 """
+#     pivot_data = request_sql(conn, pivot_query)
+    
+#     if pivot_data:
+#         pivot = pd.pivot_table(
+#             data=pd.DataFrame(
+#                 data=pivot_data,
+#                 columns=['Ресурс', 'Категория', '%']
+#             ),
+#             index="Категория",
+#             columns="Ресурс",
+#             values='%',
+#             aggfunc="first",
+#             fill_value=0
+#         ).astype(int)
+        
+#         st.dataframe(
+#             pivot.style.applymap(color_pivot, subset=list(pivot.columns))
+#         )
+#     else:
+#         st.warning("Нет данных для отображения.")
+# else:
+#     st.error("Тип ресурса не выбран или отсутствует.")
+
+# # Источник данных
+# st.write(
+#     SOURCE_FORMAT.format(f"Источник: {source_text}"), unsafe_allow_html=True
+# )
+
+# # Таблица с ценами и ссылками
+# st.markdown(
+#     HEADER_FORMAT.format('Цены и ссылки'),
+#     unsafe_allow_html=True
+# )
+
+# if type and not pivot.empty:
+#     category = st.sidebar.radio(
+#         label="Выберите категорию:",
+#         options=list(pivot.index),
+#         horizontal=False
+#     )
+
+#     query = f"""SELECT cards.resource, analogues.name_analogue,
+#                     CAST(prices.price AS INT),
+#                     CAST(analogues.price AS INT),
+#                     CAST((prices.price/analogues.price-1)*100 AS INT),
+#                     url
+#                 FROM prices
+#                 LEFT JOIN cards
+#                     ON cards.id = prices.id
+#                 LEFT JOIN analogues
+#                     ON cards.name_analogue = analogues.name_analogue
+#                 WHERE date = '{last_date}'
+#                     AND cards.type = '{type}'
+#                     AND cards.category = '{category}'
+#                     AND cards.name_analogue <> 0
+#                     AND prices.price <> 0
+#                 GROUP BY cards.resource, analogues.name_analogue
+#                 ORDER BY cards.resource, analogues.price
+#                 """
+#     data = pd.DataFrame(
+#         data=request_sql(conn, query),
+#         columns=['Ресурс', 'Аналог', 'Цена', 'Цена аналога', '%', 'url']
+#     )
+
+#     # Форматирование ссылок в таблице
+#     for i in range(len(data)):
+#         price = data.iloc[i, 2]
+#         url = data.iloc[i, 5]
+#         perc = data.iloc[i, 4]
+#         color = 'limegreen' if perc >= 0 else 'red'
+#         data.iloc[i, 2] = LINK_FORMAT.format(url, price, color, perc)
+
+#     if not data.empty:
+#         df_prices = pd.pivot_table(
+#             data=data,
+#             index=['Аналог', 'Цена аналога'],
+#             columns='Ресурс',
+#             values=['Цена'],
+#             aggfunc='first',
+#             fill_value=0
+#         )
+#         df_prices.columns = df_prices.columns.swaplevel(0, 1).map(' '.join)
+#         df_prices = df_prices.reindex(
+#             labels=sorted(df_prices.columns),
+#             axis=1
+#         ).sort_index(level=[1]).reset_index()
+
+#         df_prices = df_prices.style.applymap(
+#             color_pivot,
+#             subset=list(filter(lambda x: '%' in x, df_prices.columns))
+# )
+
+#         with st.container():
+#             st.write(
+#                 df_prices.to_html(render_links=True, escape=False),
+#                 unsafe_allow_html=True
+#             )
+#     else:
+#         st.warning("Нет данных для выбранной категории.")
+# else:
+#     st.warning("Выберите корректный тип ресурса и категорию.")
+# Сводная таблица со средней скидкой
+if type:
     pivot_query = f"""SELECT cards.resource, cards.category,
                 ROUND((SUM(prices.price)/SUM(analogues.price)-1)*100) AS perc
                 FROM prices
@@ -217,7 +310,7 @@ else:
                 ORDER BY cards.resource
                 """
     pivot_data = request_sql(conn, pivot_query)
-
+    
     if pivot_data:
         pivot = pd.pivot_table(
             data=pd.DataFrame(
@@ -230,72 +323,80 @@ else:
             aggfunc="first",
             fill_value=0
         ).astype(int)
-
+        
         st.dataframe(
-            pivot.style.map(color_pivot, subset=list(pivot.columns))
-        )
-        st.write(
-            SOURCE_FORMAT.format(f"Источник: {sources.get(type, 'Неизвестно')}"),
-            unsafe_allow_html=True
+            pivot.style.applymap(color_pivot, subset=list(pivot.columns))
         )
     else:
-        st.warning("Нет данных для сводной таблицы.")
+        st.warning("Нет данных для отображения.")
+else:
+    st.error("Тип ресурса не выбран или отсутствует.")
 
-    # Таблица с ценами и ссылками
-    st.markdown(
-        HEADER_FORMAT.format('Цены и ссылки'),
-        unsafe_allow_html=True
+# Таблица с ценами и ссылками
+if type and not pivot.empty:
+    category = st.sidebar.radio(
+        label="Выберите категорию:", 
+        options=list(pivot.index), 
+        horizontal=False
     )
 
-    if pivot_data:
-        category = st.sidebar.radio(
-            label="Выберите категорию:",
-            options=list(pivot.index) if not pivot.empty else [],
-            horizontal=False,
-            key="selected_category"
+    query = f"""SELECT cards.resource, analogues.name_analogue,
+                    CAST(prices.price AS INT),
+                    CAST(analogues.price AS INT),
+                    CAST((prices.price/analogues.price-1)*100 AS INT),
+                    url
+                FROM prices
+                LEFT JOIN cards
+                    ON cards.id = prices.id
+                LEFT JOIN analogues
+                    ON cards.name_analogue = analogues.name_analogue
+                WHERE date = '{last_date}'
+                    AND cards.type = '{type}'
+                    AND cards.category = '{category}'
+                    AND cards.name_analogue <> 0
+                    AND prices.price <> 0
+                GROUP BY cards.resource, analogues.name_analogue
+                ORDER BY cards.resource, analogues.price
+                """
+    data = pd.DataFrame(
+        data=request_sql(conn, query),
+        columns=['Ресурс', 'Аналог', 'Цена', 'Цена аналога', '%', 'url']
+    )
+
+    # Форматирование ссылок в таблице
+    for i in range(len(data)):
+        price = data.iloc[i, 2]
+        url = data.iloc[i, 5]
+        perc = data.iloc[i, 4]
+        color = 'limegreen' if perc >= 0 else 'red'
+        data.iloc[i, 2] = LINK_FORMAT.format(url, price, color, perc)
+
+    if not data.empty:
+        df_prices = pd.pivot_table(
+            data=data,
+            index=['Аналог', 'Цена аналога'],
+            columns='Ресурс',
+            values=['Цена'],
+            aggfunc='first',
+            fill_value=0
+        )
+        df_prices.columns = df_prices.columns.swaplevel(0, 1).map(' '.join)
+        df_prices = df_prices.reindex(
+            labels=sorted(df_prices.columns),
+            axis=1
+        ).sort_index(level=[1]).reset_index()
+
+        df_prices = df_prices.style.applymap(
+            color_pivot,
+            subset=list(filter(lambda x: '%' in x, df_prices.columns))
         )
 
-        query = f"""SELECT cards.resource, analogues.name_analogue,
-                       CAST(prices.price AS INT),
-                       CAST(analogues.price AS INT),
-                       CAST((prices.price/analogues.price-1)*100 AS INT),
-                       url
-                   FROM prices
-                   LEFT JOIN cards
-                       ON cards.id = prices.id
-                   LEFT JOIN analogues
-                       ON cards.name_analogue = analogues.name_analogue
-                   WHERE date = '{last_date}'
-                     AND cards.type = '{type}'
-                     AND cards.category = '{category}'
-                     AND cards.name_analogue <> 0
-                     AND prices.price <> 0
-                   GROUP BY cards.resource, analogues.name_analogue
-                   ORDER BY cards.resource, analogues.price
-                """
-        data = request_sql(conn, query)
-
-        if data:
-            df = pd.DataFrame(
-                data=data,
-                columns=['Ресурс', 'Аналог', 'Цена', 'Цена аналога', '%', 'url']
+        with st.container():
+            st.write(
+                df_prices.to_html(render_links=True, escape=False),
+                unsafe_allow_html=True
             )
-
-            # Форматирование данных
-            for i in range(len(df)):
-                price = df.iloc[i, 2]
-                df.at[i, 'Цена'] = int(re.sub(r'\D', '', str(price)))
-
-            # Пивот таблица
-            df_prices = pd.pivot_table(
-                data=df,
-                index=['Аналог', 'Цена аналога'],
-                columns='Ресурс',
-                values='Цена',
-                aggfunc='first',
-                fill_value=0
-            ).reset_index()
-
-            st.dataframe(df_prices)
-        else:
-            st.warning("Нет данных для таблицы цен.")
+    else:
+        st.warning("Нет данных для выбранной категории.")
+else:
+    st.warning("Выберите корректный тип ресурса и категорию.")
